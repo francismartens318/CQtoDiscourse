@@ -1,0 +1,53 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Train Mode",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/Labeler/src/main.py",
+            "args": ["train"],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "env": {
+                "PYTHONARGS": "-Xfrozen_modules=off"
+            }
+        },
+        {
+            "name": "Predict Mode",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/Labeler/src/main.py",
+            "args": ["predict"],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "env": {
+                "PYTHONARGS": "-Xfrozen_modules=off"
+            }
+        },
+        {
+            "name": "Predict Mode with Update",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/Labeler/src/main.py",
+            "args": ["predict", "--update"],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "env": {
+                "PYTHONARGS": "-Xfrozen_modules=off"
+            }
+        },
+        {
+            "name": "Predict Mode with Start Date",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/Labeler/src/main.py",
+            "args": ["predict", "--start_date", "2023-01-01"],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "env": {
+                "PYTHONARGS": "-Xfrozen_modules=off"
+            }
+        }
+    ]
+}
