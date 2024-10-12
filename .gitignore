@@ -23,6 +23,12 @@ dist/
 target/
 dist/
 
+.venv/
+.env
+.vscode/
+
+
+
 # JetBrains IDE
 .idea/
 
