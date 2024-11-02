@@ -12,9 +12,13 @@ import html2text
 from markdownify import markdownify as md
 import requests
 import re
+from logger_config import setup_logger
 
 # Load environment variables from .env file
 load_dotenv()
+
+# Setup logging
+logger = setup_logger()
 
 class QuestionMigrator:
     def __init__(self, dry_run=True, try_count=None, ignore_duplicate=False):
@@ -258,6 +262,34 @@ class QuestionMigrator:
         
         return self.html_to_markdown(body) + "\n\n---\n\n"+ message + "\n\n"
 
+    def delete_all_topics(self):
+        if self.dry_run:
+            print("Dry run: Would delete migrated topics")
+            return
+
+        print("Starting to delete migrated topics...")
+        
+        deleted_count = 0
+        failed_count = 0
+        
+        # Get all topics from the default migration category
+        topics = self.discourse_client.list_topics_by_category()
+        
+        for topic in topics:
+            try:
+                self.discourse_client.delete_topic(topic['id'])
+                deleted_count += 1
+                print(f"Deleted topic ID: {topic['id']}")
+                # Sleep for 1 second after every 10 deletions
+                if deleted_count % 10 == 0 and deleted_count > 0:
+                    time.sleep(5)
+                    logging.info(f"Pausing after {deleted_count} deletions...")
+            except Exception as e:
+                failed_count += 1
+                logging.error(f"Failed to delete topic {topic['id']}: {str(e)}")
+        
+        print(f"Topic deletion completed. Deleted {deleted_count} topics. Failed to delete {failed_count} topics.")
+
 def main():
     parser = argparse.ArgumentParser(description='Migrate questions from Confluence to Discourse.')
     parser.add_argument('--dry-run', action='store_true', help='Perform a dry run without actually creating topics')
@@ -265,6 +297,7 @@ def main():
     parser.add_argument('--try-count', type=int, default=2, help='Number of topics to attempt to create (default: 2, ignored if --do-run is set)')
     parser.add_argument('--question-id', type=str, help='ID of a single question to migrate')
     parser.add_argument("--ignore-duplicate", action="store_true", help="Ignore duplicate question check")
+    parser.add_argument('--delete-all-topics', action='store_true', help='Delete all topics in Discourse')
 
     args = parser.parse_args()
 
@@ -272,6 +305,9 @@ def main():
     if args.question_id:
         migrator = QuestionMigrator(dry_run=False, try_count=None, ignore_duplicate=True)
         migrator.migrate_single_question(args.question_id)
+    elif args.delete_all_topics:
+        migrator = QuestionMigrator(dry_run=args.dry_run)
+        migrator.delete_all_topics()
     else:
         # Logic for bulk migration
         if args.do_run:

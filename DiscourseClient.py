@@ -4,40 +4,98 @@ import tempfile
 import os
 from pydiscourse.client import DiscourseClient as BaseDiscourseClient
 from pydiscourse.exceptions import DiscourseClientError
+from typing import List, Optional
+import logging
+from time import sleep
+
+
+class DiscourseTagManager:
+    def __init__(self, client):
+        self.client = client
+        
+    def clean_tag_name(self, tag: str) -> str:
+        """Clean tag name to fit Discourse requirements"""
+        # Remove 'connector-' prefix and limit to 20 chars
+        tag = tag.replace('connector-', '')
+        return tag[:20]
+    
+    def create_tag(self, tag_name: str) -> Optional[dict]:
+        """Create a new tag if it doesn't exist"""
+        try:
+            cleaned_tag = self.clean_tag_name(tag_name)
+            return self.client._post(
+                "/tags.json",
+                tag={"name": cleaned_tag}
+            )
+        except DiscourseClientError as e:
+            if "already exists" not in str(e):
+                print(f"Error creating tag '{tag_name}': {str(e)}")
+            return None
+            
+    def ensure_tags_exist(self, tags: List[str]) -> List[str]:
+        """Create tags if they don't exist and return cleaned tag names"""
+        cleaned_tags = [self.clean_tag_name(tag) for tag in tags]
+        for tag in cleaned_tags:
+            self.create_tag(tag)
+        return cleaned_tags
+        
+    def add_tags_to_topic(self, topic_id: int, tags: List[str]) -> dict:
+        """Add tags to a topic"""
+        cleaned_tags = self.ensure_tags_exist(tags)
+        return self.client._put(
+            f"/t/{topic_id}.json",
+            tags=cleaned_tags
+        )
 
 
 class DiscourseClient:
-    def __init__(self, base_url, api_key, api_username, default_category_name="Migrated Questions"):
-        self.base_url = base_url
-        self.api_key = api_key
-        self.api_username = api_username
+    def __init__(self, host, api_key, api_username):
+        """Initialize the Discourse client.
+        
+        Args:
+            host (str): The Discourse host URL
+            api_username (str): The Discourse API username
+            api_key (str): The Discourse API key
+            default_category_id (int, optional): Default category ID for operations
+        """
+        # Setup logging for pydiscourse
+        logging.getLogger('pydiscourse.client').setLevel(logging.DEBUG)
+        
         self.client = BaseDiscourseClient(
-            host=base_url,
+            host=host,
             api_username=api_username,
             api_key=api_key
         )
 
+        self.default_category_name = "Migrated Questions"
         # Set up the default category
-        self.default_category_id = self.get_or_create_category(default_category_name)
+        self.get_or_create_category()
 
-    def get_or_create_category(self, category_name):
+        self.tag_manager = DiscourseTagManager(self.client)
+
+    def get_or_create_category(self):
         # Get all categories
         categories = self.client.categories()
         
         # Search for the category by name
         for category in categories:
-            if category['name'] == category_name:
+            if category['name'] == self.default_category_name:
+                self.default_category_id = category['id']
+                self.default_slug = category['slug']
                 return category['id']
         
         # If the category doesn't exist, create it
         new_category = self.client.create_category(
-            name=category_name,
+            name=self.default_category_name,
             color="0088CC",  # You can change this default color
             text_color="FFFFFF"  # You can change this default text color
         )
+        self.default_category_id = new_category['category']['id']
+        self.default_slug = new_category['category']['slug']
+
         return new_category['category']['id']
 
-    def create_topic(self, title, raw_content, date_asked=None, category_id=None):
+    def create_topic(self, title, raw_content, date_asked=None, category_id=None, tags=None):
         try:
             create_post_params = {
                 'content': raw_content,
@@ -47,11 +105,14 @@ class DiscourseClient:
             }
 
             topic = self.client.create_post(**create_post_params)
+            
+            # Add tags if provided
+            if tags:
+                self.tag_manager.add_tags_to_topic(topic['topic_id'], tags)
+                
             return topic
         except DiscourseClientError as e:
             print(f"Error creating topic '{title}': {str(e)}")
-            # You might want to log this error or handle it in a specific way
-            # For now, we'll re-raise the exception
             raise
 
     def create_post(self, topic_id, raw_content):
@@ -119,4 +180,57 @@ class DiscourseClient:
             return response, None
         except Exception as e:
             return None, f"\n\n[Error uploading file '{filename}': {str(e)}]"
+
+    def delete_topic(self, topic_id: int) -> dict:
+        """Delete a topic by its ID.
+        
+        Args:
+            topic_id (int): The ID of the topic to delete
+            
+        Returns:
+            dict: Response from the server
+        """
+        return self.client.delete_topic(topic_id)
+
+    def get_topics(self):
+        """Fetch all topics from Discourse"""
+        response = self.client.get('/latest.json')
+        return response.get('topic_list', {}).get('topics', [])
+
+    def list_topics_by_category(self, category_id: int = None, category_slug: str = None) -> List[dict]:
+        """Fetch all topics from a specific category."""
+        if category_id is None:
+            category_id = self.default_category_id
+
+        if category_slug is None:
+            category_slug = self.default_slug
+        
+        all_topics = []
+        page = 0
+        
+        while True:
+            try:
+                response = self.client._get(
+                    f"/c/{category_id}/l/latest.json?page={page}"
+                )
+            except DiscourseClientError as e:
+                if e.response.status_code == 400:
+                    page += 1
+                    continue
+                raise
+            
+            if not response or 'topic_list' not in response:
+                break
+                
+            topics = response['topic_list'].get('topics', [])
+            if not topics:
+                break
+                
+            all_topics.extend(topics)
+            page += 1
+            logging.info(f"Fetched page {page}, having {len(all_topics)} topics, last topic: {topics[-1]['title']}")
+            sleep(5)  # Sleep for 5 seconds between page fetches
+
+        return all_topics
+
     # Add more methods as needed, using self.client to interact with the API

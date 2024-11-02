@@ -6,8 +6,32 @@
             "type": "debugpy",
             "request": "launch",
             "program": "${workspaceFolder}/QuestionMigrator.py",
-            // "args": ["--question-id", "58493983"],
+            //"args": ["--question-id", "58493983"],
             "args": ["--try-count", "55"],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}"
+            }
+        },
+        {
+            "name": "Python: Migrate Question 128024650",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/QuestionMigrator.py",
+            "args": ["--question-id", "128024650"],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}"
+            }
+        },
+        {
+            "name": "Python: Delete All Topics",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/QuestionMigrator.py",
+            "args": ["--delete-all-topics"],
             "console": "integratedTerminal",
             "justMyCode": true,
             "env": {
