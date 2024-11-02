@@ -2,12 +2,12 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Python: QuestionMigrator.py",
+            "name": "Python: QuestionMigrator.py try 8",
             "type": "debugpy",
             "request": "launch",
             "program": "${workspaceFolder}/QuestionMigrator.py",
             //"args": ["--question-id", "58493983"],
-            "args": ["--try-count", "55"],
+            "args": ["--try-count", "8"],
             "console": "integratedTerminal",
             "justMyCode": true,
             "env": {

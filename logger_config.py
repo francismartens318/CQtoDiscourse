@@ -9,7 +9,7 @@ def setup_logger():
     # Create stdout handler if it doesn't exist
     if not logger.handlers:
         handler = logging.StreamHandler()
-        handler.setLevel(logging.DEBUG)
+        handler.setLevel(logging.INFO)
         
         # Create formatter and add it to the handler
         formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')

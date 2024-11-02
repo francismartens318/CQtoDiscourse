@@ -104,12 +104,9 @@ class DiscourseClient:
                 #'created_at': date_asked.isoformat() if date_asked else None,
             }
 
-            topic = self.client.create_post(**create_post_params)
-            
-            # Add tags if provided
-            if tags:
-                self.tag_manager.add_tags_to_topic(topic['topic_id'], tags)
-                
+            cleaned_tags = [self.tag_manager.clean_tag_name(tag) for tag in tags]
+            topic = self.client.create_post(**create_post_params, tags=cleaned_tags)
+    
             return topic
         except DiscourseClientError as e:
             print(f"Error creating topic '{title}': {str(e)}")

@@ -75,12 +75,17 @@ class QuestionMigrator:
 
         title = question['title']
         content = self.prepare_question_content(question)
+        
+        # Extract tags from the question's topics
+        tags = []
+        if 'topics' in question and question['topics']:
+            tags = [topic['name'] for topic in question['topics']]
 
         if self.dry_run:
-            self.simulate_topic_creation(title, content)
+            self.simulate_topic_creation(title, content, tags)
         else:
             try:
-                topic = self.discourse_client.create_topic(title, content, question['dateAsked'])
+                topic = self.discourse_client.create_topic(title, content, question['dateAsked'], tags=tags)
                 print(f"Created Discourse topic: '{title}' (ID: {topic['topic_id']})")
                 self.process_answers(question, topic['topic_id'])
                 self.update_migration_status(question_id)
@@ -157,8 +162,10 @@ class QuestionMigrator:
         content += self.format_comments(answer_details.get('comments', []))
         return content
 
-    def simulate_topic_creation(self, title, content):
+    def simulate_topic_creation(self, title, content, tags=None):
         print(f"Would create Discourse topic: '{title}'")
+        if tags:
+            print(f"With tags: {', '.join(tags)}")
         print(f"Content preview: {content[:100]}...")
 
     def update_migration_status(self, question_id):
