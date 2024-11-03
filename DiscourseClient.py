@@ -161,9 +161,9 @@ class DiscourseClient:
         """
         return self.client.delete_topic(topic_id)
 
-    def get_topics(self):
+    def get_latest_topics(self):
         """Fetch all topics from Discourse"""
-        response = self.client.get('/latest.json')
+        response = self.client._get('/latest.json')
         return response.get('topic_list', {}).get('topics', [])
 
     def list_topics_by_category(self, category_id: int = None, category_slug: str = None) -> List[dict]:
@@ -181,8 +181,8 @@ class DiscourseClient:
         """
         if category_id is None and category_slug is None:
             # Use general category as default
-            category_id = self.category_manager.get_category_id('general')
-            category_slug = self.category_manager.get_category_slug('general')
+            category_id = self.category_manager.get_category_id('General Questions')
+            category_slug = self.category_manager.get_category_slug('General Questions')
         
         all_topics = []
         page = 0

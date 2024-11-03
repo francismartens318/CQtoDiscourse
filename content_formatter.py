@@ -15,7 +15,7 @@ class ContentFormatter:
         
         # Then process regular markdown-style links
         pattern = r'\[([^\]]+)\]\((/[^)]+)\)'
-        replacement = rf'[\1 (_old community_)]({self.base_url}\2)'
+        replacement = rf'[\1]({self.base_url}\2)  <small>_(old community)_</small>'
         content = re.sub(pattern, replacement, content)
         return content
 
@@ -34,7 +34,7 @@ class ContentFormatter:
         
         # Add link to original question
         original_link = f"{self.base_url}/questions/{question['id']}"
-        content = f"<sub>*Originally asked by {author} on {date_asked} ([original question]({original_link}))*</sub>\n\n\n\n"
+        content = f"<small>_Originally asked by {author} on {date_asked} [(original question)]({original_link})_</small>\n\n---\n\n"
         
         # Process the body content to update relative links and convert emojis
         processed_body = self.process_links(processed_body)
@@ -46,7 +46,7 @@ class ContentFormatter:
     def format_answer_content(self, answer_details, processed_body):
         author = answer_details['author']['fullName']
         date = time.strftime('%d %B %Y', time.localtime(answer_details['dateAnswered']/1000))
-        content = f"<sub>*Answer by {author} on {date}*</sub>\n\n\n\n"
+        content = f"<small>*Answer by {author} on {date}*</small>\n\n\n\n"
         # Process the body content to update relative links and convert emojis
         processed_body = self.process_links(processed_body)
         content += processed_body

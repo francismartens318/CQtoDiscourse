@@ -178,29 +178,37 @@ class QuestionMigrator:
 
     def delete_all_topics(self):
         if self.dry_run:
-            print("Dry run: Would delete migrated topics")
+            print("Dry run: Would delete all topics")
             return
 
-        print("Starting to delete migrated topics...")
+        logger.info("Starting to delete all topics...")
         
         deleted_count = 0
         failed_count = 0
         
-        # Get all topics from the default migration category
-        topics = self.discourse_client.list_topics_by_category()
-        
-        for topic in topics:
-            try:
-                self.discourse_client.delete_topic(topic['id'])
-                deleted_count += 1
-                print(f"Deleted topic ID: {topic['id']}")
-                # Sleep for 5 second after every 10 deletions
-                if deleted_count % 10 == 0 and deleted_count > 0:
-                    time.sleep(10)
-                    logging.info(f"Pausing after {deleted_count} deletions...")
-            except Exception as e:
-                failed_count += 1
-                logging.error(f"Failed to delete topic {topic['id']}: {str(e)}")
+        try:
+            # Get list of all topics
+            latest_topics = self.discourse_client.get_latest_topics()
+            
+            for topic in latest_topics:
+                try:
+                    self.discourse_client.delete_topic(topic['id'])
+                    deleted_count += 1
+                    print(f"Deleted topic ID: {topic['id']} - '{topic.get('title', 'No title')}'")
+                    
+                    
+                    # Additional pause every 20 deletions
+                    if deleted_count % 10 == 0:
+                        print(f"Pausing after {deleted_count} deletions...")
+                        time.sleep(7)
+                        
+                except Exception as e:
+                    failed_count += 1
+                    logging.error(f"Failed to delete topic {topic['id']}: {str(e)}")
+                    continue
+                    
+        except Exception as e:
+            logging.error(f"Failed to fetch topics: {str(e)}")
         
         print(f"Topic deletion completed. Deleted {deleted_count} topics. Failed to delete {failed_count} topics.")
 

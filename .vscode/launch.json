@@ -2,6 +2,18 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "Python: Run QuestionMigrator",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/QuestionMigrator.py",
+            "args": ["--do-run"],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}"
+            }
+        },
+        {
             "name": "Python: QuestionMigrator.py try 8",
             "type": "debugpy",
             "request": "launch",
