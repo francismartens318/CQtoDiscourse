@@ -1,9 +1,26 @@
-requests==2.31.0
-atlassian-python-api==3.41.1
-python-dateutil==2.8.2
-beautifulsoup4==4.12.2
-markdown2==2.4.10
-python-dotenv==1.0.0
-pydiscourse==1.7.0
-html2text==2024.2.26
-markdownify==0.13.1
+# API Clients
+requests>=2.31.0
+atlassian-python-api>=3.41.2
+
+# Environment Variables
+python-dotenv>=1.0.0
+
+# HTML/Markdown Processing
+beautifulsoup4>=4.12.0
+markdown2>=2.4.10
+html2text>=2020.1.16
+
+# Date/Time Handling
+pytz>=2024.1
+
+# Optional - for concurrent processing
+aiohttp>=3.9.1
+asyncio>=3.4.3
+
+# Logging and Error Tracking
+structlog>=24.1.0
+
+# Testing
+pytest>=8.0.0
+pytest-mock>=3.12.0
+responses>=0.24.1
