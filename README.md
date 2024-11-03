@@ -14,6 +14,32 @@ A Python tool designed to migrate a Confluence questions based Q&A site and thei
 - Preserves question topics as Discourse tags
 - Handles HTML to Markdown conversion
 
+## Content Conversions
+
+During migration, the following conversions are automatically applied:
+
+- **Text Formatting**
+  - Confluence wiki markup → Markdown
+  - HTML → Markdown
+  - Code blocks with syntax highlighting
+  - Tables
+  
+- **Media & Attachments**
+  - Images → Uploaded and embedded in Discourse
+  - File attachments → Uploaded and linked
+  - Video embeds → Compatible Discourse embeds
+
+- **Metadata**
+  - Question labels → Discourse tags
+  - User mentions → Discourse @mentions
+  - Internal links → Updated Discourse URLs
+  - Timestamps → Preserved in Discourse format
+  
+- **Special Elements**
+  - Info/warning/note macros → Discourse quotes/notices
+  - Emoticons → Emoji equivalents
+  
+
 ## Prerequisites
 
 - Python 3.x
