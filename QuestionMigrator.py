@@ -63,7 +63,7 @@ class QuestionMigrator:
             self.discourse_client,
             dry_run
         )
-        self.content_formatter = ContentFormatter()
+        self.content_formatter = ContentFormatter(base_url='https://oldcommunity.exalate.com')
         self.answer_processor = AnswerProcessor(
             self.questions_fetcher,
             self.discourse_client,
