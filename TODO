@@ -2,7 +2,7 @@
 
 
 
-* Convert emojis to the Discourse format
+
 
 
 
@@ -17,4 +17,6 @@
 * Transfer solutions
 * Update internal links
 * Add appropriate comments to the code
+* Convert emojis to the Discourse format
+* Add a link to the original post
 

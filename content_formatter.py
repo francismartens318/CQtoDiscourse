@@ -27,7 +27,11 @@ class ContentFormatter:
     def format_question_content(self, question, question_details, processed_body):
         author = question['author']['fullName']
         date_asked = time.strftime('%d %B %Y', time.localtime(question['dateAsked']/1000))
-        content = f"*Originally asked by {author} on {date_asked}*\n\n---\n\n"
+        
+        # Add link to original question
+        original_link = f"{self.base_url}/questions/{question['id']}"
+        content = f"*Originally asked by {author} on {date_asked}*\n*<sub>View [question on old community]({original_link})</sub>*\n\n---\n\n"
+        
         # Process the body content to update relative links and convert emojis
         processed_body = self.process_links(processed_body)
         
