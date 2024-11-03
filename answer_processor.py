@@ -40,7 +40,7 @@ class AnswerProcessor:
         post = self.discourse_client.create_post(topic_id, answer_content)
         print(f"Added answer to topic '{title}'")
         
-        if answer_details.get('accepted', False):
+        if answer_details.get('accepted', True):
             self._mark_answer_as_solution(topic_id, post['id'])
 
     def _prepare_answer_content(self, answer_details):
@@ -52,7 +52,7 @@ class AnswerProcessor:
         return self.content_formatter.format_answer_content(answer_details, processed_body)
 
     def _mark_answer_as_solution(self, topic_id, post_id):
-        # Not possible to mark answer as solution in Discourse yet
+        
         if self.dry_run:
             print(f"Would mark post {post_id} as solution for topic {topic_id}")
             return

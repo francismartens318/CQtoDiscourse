@@ -95,10 +95,8 @@ class DiscourseClient:
         """
         data = {
             "id": post_id,
-            "topic_id": topic_id,
-            "post_id": post_id
         }
-        return self.client._put("/solution/accept.json",json=True, **data)
+        return self.client._post("/solution/accept",json=True, **data)
 
     def upload_file(self, filename, file_content):
         """
