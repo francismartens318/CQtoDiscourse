@@ -68,6 +68,8 @@ class AnswerProcessor:
         if isinstance(body, dict):
             body = body.get('content', '')
             
+        # Convert emojis before processing attachments
+        body = self.content_formatter.convert_emojis(body)
         processed_body = self.attachment_processor.process_attachments(body, answer_details['id'])
         return self.content_formatter.format_answer_content(answer_details, processed_body)
 

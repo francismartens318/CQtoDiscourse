@@ -123,7 +123,8 @@ class QuestionMigrator:
         body = question_details.get('body', '')
         if isinstance(body, dict):
             body = body.get('content', '')
-            
+
+        body = self.content_formatter.convert_emojis(body)    
         processed_body = self.attachment_processor.process_attachments(body, question['id'])
         return self.content_formatter.format_question_content(question, question_details, processed_body)
 
