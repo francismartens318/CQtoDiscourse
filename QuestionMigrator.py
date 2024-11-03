@@ -20,7 +20,7 @@ from answer_processor import AnswerProcessor
 from comment_processor import CommentProcessor
 
 # Load environment variables from .env file
-load_dotenv()
+load_dotenv(verbose=True, override=True)
 
 # Setup logging
 logger = setup_logger()
@@ -34,6 +34,8 @@ class QuestionMigrator:
         discourse_url = os.getenv('DISCOURSE_URL')
         discourse_api_key = os.getenv('DISCOURSE_API_KEY')
         discourse_api_username = os.getenv('DISCOURSE_API_USERNAME')
+
+        logger.info(f"Using Discourse URL: {discourse_url} with user {discourse_api_username}")
 
         # Validate that all required environment variables are set
         required_vars = [
@@ -192,9 +194,9 @@ class QuestionMigrator:
                 self.discourse_client.delete_topic(topic['id'])
                 deleted_count += 1
                 print(f"Deleted topic ID: {topic['id']}")
-                # Sleep for 1 second after every 10 deletions
+                # Sleep for 5 second after every 10 deletions
                 if deleted_count % 10 == 0 and deleted_count > 0:
-                    time.sleep(5)
+                    time.sleep(10)
                     logging.info(f"Pausing after {deleted_count} deletions...")
             except Exception as e:
                 failed_count += 1

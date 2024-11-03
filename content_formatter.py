@@ -9,7 +9,11 @@ class ContentFormatter:
         self.base_url = base_url.rstrip('/')
 
     def process_links(self, content):
-        # Process markdown-style links
+        # First handle user profile links
+        user_pattern = r'\[([^\]]+)\]\(/display/~[^\)]+\)'
+        content = re.sub(user_pattern, r'\1', content)
+        
+        # Then process regular markdown-style links
         pattern = r'\[([^\]]+)\]\((/[^)]+)\)'
         replacement = rf'[\1 (_old community_)]({self.base_url}\2)'
         content = re.sub(pattern, replacement, content)

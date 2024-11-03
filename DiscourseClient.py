@@ -22,7 +22,7 @@ class DiscourseClient:
             default_category_id (int, optional): Default category ID for operations
         """
         # Setup logging for pydiscourse
-        logging.getLogger('pydiscourse.client').setLevel(logging.DEBUG)
+        
         
         self.client = BaseDiscourseClient(
             host=host,
