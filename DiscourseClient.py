@@ -8,6 +8,7 @@ from pydiscourse.client import DiscourseClient as BaseDiscourseClient
 from pydiscourse.exceptions import DiscourseClientError
 from typing import List, Optional
 from time import sleep
+from DiscourseCategoryManager import DiscourseCategoryManager
 from DiscourseTagManager import DiscourseTagManager
 
 
@@ -30,38 +31,9 @@ class DiscourseClient:
             api_key=api_key
         )
 
-        self.default_category_name = "Migrated Questions"
-        # Set up the default category
-        self.get_or_create_category()
-
+        # Initialize managers
+        self.category_manager = DiscourseCategoryManager(self.client)
         self.tag_manager = DiscourseTagManager(self.client)
-
-    def get_or_create_category(self):
-        """Get an existing category by name or create a new one if it doesn't exist.
-        
-        Returns:
-            int: The ID of the existing or newly created category
-        """
-        # Get all categories
-        categories = self.client.categories()
-        
-        # Search for the category by name
-        for category in categories:
-            if category['name'] == self.default_category_name:
-                self.default_category_id = category['id']
-                self.default_slug = category['slug']
-                return category['id']
-        
-        # If the category doesn't exist, create it
-        new_category = self.client.create_category(
-            name=self.default_category_name,
-            color="0088CC",  # You can change this default color
-            text_color="FFFFFF"  # You can change this default text color
-        )
-        self.default_category_id = new_category['category']['id']
-        self.default_slug = new_category['category']['slug']
-
-        return new_category['category']['id']
 
     def create_topic(self, title, raw_content, date_asked=None, category_id=None, tags=None):
         """Create a new topic in Discourse.
@@ -80,16 +52,26 @@ class DiscourseClient:
             DiscourseClientError: If topic creation fails
         """
         try:
+            # Ensure tags is a list
+            tags = tags or []
+            
+            # Add migrated_question tag
+            if 'migrated_question' not in tags:
+                tags.append('migrated_question')
+                
+            # Determine category if not explicitly provided
+            if category_id is None:
+                category_id = self.category_manager.determine_category(tags)
+                
             create_post_params = {
                 'content': raw_content,
                 'title': title,
-                'category_id': category_id or self.default_category_id,
-                #'created_at': date_asked.isoformat() if date_asked else None,
+                'category_id': category_id,
             }
 
             cleaned_tags = [self.tag_manager.clean_tag_name(tag) for tag in tags]
             topic = self.client.create_post(**create_post_params, tags=cleaned_tags)
-    
+
             return topic
         except DiscourseClientError as e:
             print(f"Error creating topic '{title}': {str(e)}")
@@ -197,11 +179,10 @@ class DiscourseClient:
         Raises:
             DiscourseClientError: If the API request fails
         """
-        if category_id is None:
-            category_id = self.default_category_id
-
-        if category_slug is None:
-            category_slug = self.default_slug
+        if category_id is None and category_slug is None:
+            # Use general category as default
+            category_id = self.category_manager.get_category_id('general')
+            category_slug = self.category_manager.get_category_slug('general')
         
         all_topics = []
         page = 0

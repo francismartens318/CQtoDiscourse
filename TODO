@@ -1,7 +1,7 @@
 ### TODO
 
 
-
+* Make the oldcommunity url configurable in the .env file
 
 
 
@@ -19,4 +19,5 @@
 * Add appropriate comments to the code
 * Convert emojis to the Discourse format
 * Add a link to the original post
+* when there is a tag 'usecase' use the category use case, else use the general category
 
