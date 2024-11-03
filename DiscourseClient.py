@@ -37,6 +37,11 @@ class DiscourseClient:
         self.tag_manager = DiscourseTagManager(self.client)
 
     def get_or_create_category(self):
+        """Get an existing category by name or create a new one if it doesn't exist.
+        
+        Returns:
+            int: The ID of the existing or newly created category
+        """
         # Get all categories
         categories = self.client.categories()
         
@@ -59,6 +64,21 @@ class DiscourseClient:
         return new_category['category']['id']
 
     def create_topic(self, title, raw_content, date_asked=None, category_id=None, tags=None):
+        """Create a new topic in Discourse.
+        
+        Args:
+            title (str): The title of the topic
+            raw_content (str): The content/body of the topic
+            date_asked (datetime, optional): Original creation date
+            category_id (int, optional): Category ID to place the topic in
+            tags (List[str], optional): List of tags to apply to the topic
+            
+        Returns:
+            dict: The created topic response from Discourse
+            
+        Raises:
+            DiscourseClientError: If topic creation fails
+        """
         try:
             create_post_params = {
                 'content': raw_content,
@@ -76,6 +96,15 @@ class DiscourseClient:
             raise
 
     def create_post(self, topic_id, raw_content):
+        """Create a new post within an existing topic.
+        
+        Args:
+            topic_id (int): The ID of the topic to add the post to
+            raw_content (str): The content of the post
+            
+        Returns:
+            dict: The created post response from Discourse
+        """
         post = self.client.create_post(
             topic_id=topic_id,
             content=raw_content
@@ -156,7 +185,18 @@ class DiscourseClient:
         return response.get('topic_list', {}).get('topics', [])
 
     def list_topics_by_category(self, category_id: int = None, category_slug: str = None) -> List[dict]:
-        """Fetch all topics from a specific category."""
+        """Fetch all topics from a specific category with pagination.
+        
+        Args:
+            category_id (int, optional): The ID of the category to fetch topics from
+            category_slug (str, optional): The slug of the category
+            
+        Returns:
+            List[dict]: List of topics in the category
+            
+        Raises:
+            DiscourseClientError: If the API request fails
+        """
         if category_id is None:
             category_id = self.default_category_id
 

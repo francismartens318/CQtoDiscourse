@@ -11,6 +11,12 @@ class AnswerProcessor:
         self.content_formatter = ContentFormatter()
 
     def process_answers(self, question, topic_id):
+        """Process all answers for a given question and add them to the Discourse topic.
+        
+        Args:
+            question (dict): The question data containing answers
+            topic_id (int): The Discourse topic ID to add answers to
+        """
         if question['answersCount'] <= 0:
             return
 
@@ -23,11 +29,25 @@ class AnswerProcessor:
             logging.warning(f"Unexpected format for answers: {type(answers)}")
 
     def _process_answer_list(self, answers, topic_id, title):
+        """Process a list of answers and add them to the topic.
+        
+        Args:
+            answers (List[dict]): List of answer data
+            topic_id (int): The Discourse topic ID
+            title (str): The topic title for logging
+        """
         for answer in answers:
             self.user_registry.register_user(answer.get('author'))
             self.add_answer_to_topic(topic_id, answer, title)
 
     def add_answer_to_topic(self, topic_id, answer, title):
+        """Add a single answer as a post to a Discourse topic.
+        
+        Args:
+            topic_id (int): The Discourse topic ID
+            answer (dict): The answer data to add
+            title (str): The topic title for logging
+        """
         answer_id = answer['id']
         answer_details = self.questions_fetcher.get_answer_details(answer_id)
         answer_content = self._prepare_answer_content(answer_details)

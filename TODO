@@ -2,9 +2,6 @@
 
 
 
-* Update internal links
-* userRegistry to be added to the commit
-* Add appropriate comments to the code
 * Convert emojis to the Discourse format
 
 
@@ -18,4 +15,6 @@
 * Add a registry of all the users that ever contributed to the questions
 * cleanup code
 * Transfer solutions
+* Update internal links
+* Add appropriate comments to the code
 
