@@ -14,6 +14,10 @@ import requests
 import re
 from logger_config import setup_logger
 from UserRegistry import UserRegistry
+from attachment_processor import AttachmentProcessor
+from content_formatter import ContentFormatter
+from answer_processor import AnswerProcessor
+from comment_processor import CommentProcessor
 
 # Load environment variables from .env file
 load_dotenv()
@@ -53,6 +57,25 @@ class QuestionMigrator:
         self.confluence_password = confluence_password
         self.user_registry = UserRegistry()
 
+        self.attachment_processor = AttachmentProcessor(
+            confluence_url,
+            (confluence_username, confluence_password),
+            self.discourse_client,
+            dry_run
+        )
+        self.content_formatter = ContentFormatter()
+        self.answer_processor = AnswerProcessor(
+            self.questions_fetcher,
+            self.discourse_client,
+            self.attachment_processor,
+            self.user_registry,
+            dry_run
+        )
+        self.comment_processor = CommentProcessor(
+            self.questions_fetcher,
+            self.user_registry
+        )
+
     def load_migrated_questions(self):
         if os.path.exists(self.migrated_questions_file):
             with open(self.migrated_questions_file, 'r') as f:
@@ -62,12 +85,6 @@ class QuestionMigrator:
     def save_migrated_questions(self):
         with open(self.migrated_questions_file, 'w') as f:
             json.dump(self.migrated_questions, f)
-
-    def html_to_markdown(self, html_content):
-        # Unescape HTML entities first
-        unescaped_html = html.unescape(html_content)
-        # Convert HTML to Markdown
-        return md(unescaped_html, heading_style="ATX").strip()
 
     def migrate_question(self, question):
         question_id = question['id']
@@ -79,102 +96,39 @@ class QuestionMigrator:
         content = self.prepare_question_content(question)
         
         # Extract tags from the question's topics
-        tags = []
-        if 'topics' in question and question['topics']:
-            tags = [topic['name'] for topic in question['topics']]
+        tags = self._extract_tags(question)
 
         # Register question author
         self.user_registry.register_user(question.get('author'))
         
-        # Get question details to register commenters
-        question_details = self.questions_fetcher.get_question_details(question['id'])
-        for comment in question_details.get('comments', []):
-            self.user_registry.register_user(comment.get('author'))
+        # Process question comments
+        self.comment_processor.process_question_comments(question['id'])
 
         if self.dry_run:
             self.simulate_topic_creation(title, content, tags)
-        else:
-            try:
-                topic = self.discourse_client.create_topic(title, content, question['dateAsked'], tags=tags)
-                print(f"Created Discourse topic: '{title}' (ID: {topic['topic_id']})")
-                self.process_answers(question, topic['topic_id'])
-                self.update_migration_status(question_id)
-            except (DiscourseClientError, DiscourseServerError) as e:
-                logging.error(f"Failed to create topic '{title}': {str(e)}")
-                return
+            return
+
+        try:
+            topic = self.discourse_client.create_topic(title, content, question['dateAsked'], tags=tags)
+            print(f"Created Discourse topic: '{title}' (ID: {topic['topic_id']})")
+            self.answer_processor.process_answers(question, topic['topic_id'])
+            self.update_migration_status(question_id)
+        except (DiscourseClientError, DiscourseServerError) as e:
+            logging.error(f"Failed to create topic '{title}': {str(e)}")
 
         print(f"{'Would migrate' if self.dry_run else 'Migrated'} question: {title}")
 
     def prepare_question_content(self, question):
-        author = question['author']['fullName']
-        date_asked = time.strftime('%d %B %Y', time.localtime(question['dateAsked']/1000))
-        content = f"*Originally asked by {author} on {date_asked}*\n\n---\n\n"
-        
         question_details = self.questions_fetcher.get_question_details(question['id'])
         body = question_details.get('body', '')
         if isinstance(body, dict):
             body = body.get('content', '')
-        content += self.process_attachments(body, question['id'])
-        
-        content += self.format_comments(question_details.get('comments', []))
-        return content
-
-    def format_comments(self, comments):
-        if not comments:
-            return ""
-        
-        formatted_comments = "\n\n#### Comments:\n"
-        for comment in comments:
-            author = comment['author']['fullName']
-            date = time.strftime('%d %B %Y', time.localtime(comment['dateCommented']/1000))
-            body = self.html_to_markdown(comment.get('body', {}).get('content', ''))
-            formatted_comments += f"\n[details=\"{author} commented on {date}\"]\n> {body}\n[/details]\n"
-        return formatted_comments
-
-    def process_answers(self, question, topic_id):
-        if question['answersCount'] > 0:
-            answers = self.questions_fetcher.get_answers(question['id'])
-            if isinstance(answers, list):
-                for answer in answers:
-                    # Register answer author
-                    self.user_registry.register_user(answer.get('author'))
-                    self.add_answer_to_topic(topic_id, answer, question['title'])
-            elif isinstance(answers, dict) and 'results' in answers:
-                for answer in answers['results']:
-                    # Register answer author
-                    self.user_registry.register_user(answer.get('author'))
-                    self.add_answer_to_topic(topic_id, answer, question['title'])
-            else:
-                print(f"Unexpected format for answers: {type(answers)}")
-
-    def add_answer_to_topic(self, topic_id, answer, title):
-        answer_id = answer['id']
-        answer_details = self.questions_fetcher.get_answer_details(answer_id)
-        answer_content = self.prepare_answer_content(answer_details)
-        
-        if self.dry_run:
-            print(f"Would add answer to topic '{title}'")
-            print(f"Answer preview: {answer_content[:100]}...")
-        else:
-            post = self.discourse_client.create_post(topic_id, answer_content)
-            print(f"Added answer to topic '{title}'")
             
-            # Check if the answer is accepted
-            if answer_details.get('accepted', False):
-                self.mark_answer_as_solution(topic_id, post['id'])
+        processed_body = self.attachment_processor.process_attachments(body, question['id'])
+        return self.content_formatter.format_question_content(question, question_details, processed_body)
 
-    def prepare_answer_content(self, answer_details):
-        author = answer_details['author']['fullName']
-        date = time.strftime('%d %B %Y', time.localtime(answer_details['dateAnswered']/1000))
-        content = f"*Answer by {author} on {date}*\n\n"
-        
-        body = answer_details.get('body', '')
-        if isinstance(body, dict):
-            body = body.get('content', '')
-        content += self.process_attachments(body, answer_details['id'])
-        
-        content += self.format_comments(answer_details.get('comments', []))
-        return content
+    def _extract_tags(self, question):
+        return [topic['name'] for topic in question.get('topics', [])] if 'topics' in question else []
 
     def simulate_topic_creation(self, title, content, tags=None):
         print(f"Would create Discourse topic: '{title}'")
@@ -218,70 +172,6 @@ class QuestionMigrator:
             return
         self.migrate_question(question)
         print(f"Migration of question {question_id} completed.")
-
-    def mark_answer_as_solution(self, topic_id, post_id):
-        # not possible to mark answer as solution in Discourse yet
-        
-        return
-        if self.dry_run:
-            print(f"Would mark post {post_id} as solution for topic {topic_id}")
-        else:
-            try:
-                self.discourse_client.accept_solution(topic_id, post_id)
-                print(f"Marked post {post_id} as solution for topic {topic_id}")
-            except Exception as e:
-                print(f"Failed to mark post {post_id} as solution: {str(e)}")
-
-    def process_attachments(self, body, content_id):
-        # Find all image tags in the body
-        img_tags = re.findall(r'<img.*?>', body)
-        message = ""
-        missing_file_sep = ""
-        
-        for img_tag in img_tags:
-            src_match = re.search(r'src="(.*?)"', img_tag)
-            if not src_match:
-                print(f"Warning: Couldn't find src attribute in img tag: {img_tag}")
-                continue
-            
-            img_src = src_match.group(1)
-            # Generate a unique filename
-            filename = f"attachment_{content_id}_{img_src.split('/')[-1].split('?')[0]}"
-            
-            # Determine if the URL is absolute or relative
-            if img_src.startswith(('http://', 'https://')):
-                full_url = img_src
-            else:
-                full_url = f"{self.confluence_url}{img_src}"
-            
-            if self.dry_run:
-                print(f"Would download and upload attachment: {filename} from {full_url}")
-            else:
-                try:
-                    # Download the image
-                    response = requests.get(full_url, auth=(self.confluence_username, self.confluence_password))
-                    response.raise_for_status()
-                    
-                    # Upload the image to Discourse
-                    upload, missing_file = self.discourse_client.upload_file(filename, response.content)
-
-                    if upload and 'url' in upload:
-                        # Replace the original URL with the Discourse URL in the body
-                        body = body.replace(img_src, upload['url'])
-                        print(f"Uploaded attachment: {filename}")
-                    else:
-                        # Remove the img tag and append the message if the file couldn't be uploaded
-                        body = body.replace(img_tag, '')
-                        message += missing_file_sep + missing_file
-                        missing_file_sep = "\n\n"
-                    print(f"Couldn't upload attachment: {filename}")
-                except requests.exceptions.RequestException as e:
-                    # Remove the img tag and add an error message
-                    body = body.replace(img_tag, '')
-                    body += f"\n\n[Failed to download attachment: {filename}. Error: {str(e)}]"
-                    print(f"Failed to download attachment: {filename}. Error: {str(e)}")
-        
-        return self.html_to_markdown(body) + "\n\n---\n\n"+ message + "\n\n"
 
     def delete_all_topics(self):
         if self.dry_run:

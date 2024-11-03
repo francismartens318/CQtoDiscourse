@@ -1,7 +1,8 @@
 ### TODO
 
-* Stop repeating questions
-* Add a registry of all the users that ever contributed to the questions
+* cleanup code
+* Transfer solutions
+* Update internal links
 
 
 ### DONE
@@ -9,3 +10,6 @@
 * Transfer tags (labels)
 * Transfer images and attachments
 * Code formatting
+* Stop repeating questions
+* Add a registry of all the users that ever contributed to the questions
+
