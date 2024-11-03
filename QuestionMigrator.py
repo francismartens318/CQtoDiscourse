@@ -13,6 +13,7 @@ from markdownify import markdownify as md
 import requests
 import re
 from logger_config import setup_logger
+from UserRegistry import UserRegistry
 
 # Load environment variables from .env file
 load_dotenv()
@@ -50,6 +51,7 @@ class QuestionMigrator:
         self.confluence_url = confluence_url
         self.confluence_username = confluence_username
         self.confluence_password = confluence_password
+        self.user_registry = UserRegistry()
 
     def load_migrated_questions(self):
         if os.path.exists(self.migrated_questions_file):
@@ -80,6 +82,14 @@ class QuestionMigrator:
         tags = []
         if 'topics' in question and question['topics']:
             tags = [topic['name'] for topic in question['topics']]
+
+        # Register question author
+        self.user_registry.register_user(question.get('author'))
+        
+        # Get question details to register commenters
+        question_details = self.questions_fetcher.get_question_details(question['id'])
+        for comment in question_details.get('comments', []):
+            self.user_registry.register_user(comment.get('author'))
 
         if self.dry_run:
             self.simulate_topic_creation(title, content, tags)
@@ -126,9 +136,13 @@ class QuestionMigrator:
             answers = self.questions_fetcher.get_answers(question['id'])
             if isinstance(answers, list):
                 for answer in answers:
+                    # Register answer author
+                    self.user_registry.register_user(answer.get('author'))
                     self.add_answer_to_topic(topic_id, answer, question['title'])
             elif isinstance(answers, dict) and 'results' in answers:
                 for answer in answers['results']:
+                    # Register answer author
+                    self.user_registry.register_user(answer.get('author'))
                     self.add_answer_to_topic(topic_id, answer, question['title'])
             else:
                 print(f"Unexpected format for answers: {type(answers)}")
