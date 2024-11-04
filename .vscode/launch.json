@@ -27,11 +27,11 @@
             }
         },
         {
-            "name": "Python: Migrate Question 128024676",
+            "name": "Python: Migrate Question 2592571",
             "type": "debugpy",
             "request": "launch",
             "program": "${workspaceFolder}/QuestionMigrator.py",
-            "args": ["--question-id", "128024676"],
+            "args": ["--question-id", "2592571"],
             "console": "integratedTerminal",
             "justMyCode": true,
             "env": {

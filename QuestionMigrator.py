@@ -179,39 +179,42 @@ class QuestionMigrator:
 
     def delete_all_topics(self):
         if self.dry_run:
-            print("Dry run: Would delete all topics")
+            logger.info("Dry run: Would delete all topics")
             return
 
         logger.info("Starting to delete all topics...")
         
-        deleted_count = 0
-        failed_count = 0
-        
         try:
-            # Get list of all topics
-            latest_topics = self.discourse_client.get_latest_topics()
+            all_topics = self.discourse_client.get_all_topics()
+            total_topics = len(all_topics)
+            logger.info(f"Found {total_topics} topics to delete")
             
-            for topic in latest_topics:
+            deleted_count = 0
+            failed_count = 0
+            
+            for index, topic in enumerate(all_topics, 1):
                 try:
                     self.discourse_client.delete_topic(topic['id'])
                     deleted_count += 1
-                    print(f"Deleted topic ID: {topic['id']} - '{topic.get('title', 'No title')}'")
+                    logger.info(f"[{index}/{total_topics}] Deleted topic ID: {topic['id']} - '{topic.get('title', 'No title')}'")
                     
-                    
-                    # Additional pause every 20 deletions
-                    if deleted_count % 10 == 0:
-                        print(f"Pausing after {deleted_count} deletions...")
-                        time.sleep(7)
+                    # Additional pause every 10 deletions
+                    if deleted_count % 20 == 0:
+                        logger.info(f"Pausing after {deleted_count} deletions...")
+                        time.sleep(2)
                         
                 except Exception as e:
                     failed_count += 1
-                    logging.error(f"Failed to delete topic {topic['id']}: {str(e)}")
+                    logger.error(f"Failed to delete topic {topic['id']}: {str(e)}")
                     continue
                     
         except Exception as e:
-            logging.error(f"Failed to fetch topics: {str(e)}")
+            logger.error(f"Failed to fetch topics: {str(e)}")
         
-        print(f"Topic deletion completed. Deleted {deleted_count} topics. Failed to delete {failed_count} topics.")
+        logger.info("\nTopic deletion completed:")
+        logger.info(f"Total topics: {total_topics}")
+        logger.info(f"Successfully deleted: {deleted_count}")
+        logger.info(f"Failed to delete: {failed_count}")
 
     def migrate_questions(self, space_key=None):
         """Migrate questions from oldest to newest.

@@ -11,6 +11,8 @@ from time import sleep
 from DiscourseCategoryManager import DiscourseCategoryManager
 from DiscourseTagManager import DiscourseTagManager
 
+# Configure logger
+logger = logging.getLogger(__name__)
 
 class DiscourseClient:
     def __init__(self, host, api_key, api_username):
@@ -34,6 +36,8 @@ class DiscourseClient:
         # Initialize managers
         self.category_manager = DiscourseCategoryManager(self.client)
         self.tag_manager = DiscourseTagManager(self.client)
+
+        logger.info(f"Initialized Discourse client for {host}")
 
     def create_topic(self, title, raw_content, date_asked=None, category_id=None, tags=None):
         """Create a new topic in Discourse.
@@ -159,12 +163,29 @@ class DiscourseClient:
         Returns:
             dict: Response from the server
         """
-        return self.client.delete_topic(topic_id)
+        try:
+            self.client.delete_topic(topic_id)
+            logger.debug(f"Successfully deleted topic {topic_id}")
+        except Exception as e:
+            logger.error(f"Error deleting topic {topic_id}: {str(e)}")
+            raise
 
-    def get_latest_topics(self):
-        """Fetch all topics from Discourse"""
-        response = self.client._get('/latest.json')
-        return response.get('topic_list', {}).get('topics', [])
+    def get_latest_topics(self, page=0):
+        """
+        Get latest topics with pagination support.
+        
+        Args:
+            page (int): Page number (0-based)
+        
+        Returns:
+            list: List of topics for the requested page
+        """
+        try:
+            response = self.client._get(f'/latest.json?page={page}')
+            return response.get('topic_list', {}).get('topics', [])
+        except Exception as e:
+            logger.error(f"Error fetching latest topics: {str(e)}")
+            return []
 
     def list_topics_by_category(self, category_id: int = None, category_slug: str = None) -> List[dict]:
         """Fetch all topics from a specific category with pagination.
@@ -211,5 +232,32 @@ class DiscourseClient:
             sleep(5)  # Sleep for 5 seconds between page fetches
 
         return all_topics
+
+    def get_all_topics(self):
+        """
+        Get all topics using pagination.
+        
+        Returns:
+            list: Complete list of all topics
+        """
+        try:
+            all_topics = []
+            page = 0
+            
+            while True:
+                latest_topics = self.get_latest_topics(page=page)
+                if not latest_topics:
+                    break
+                all_topics.extend(latest_topics)
+                page += 1
+                logger.info(f"Fetched page {page} of topics ({len(latest_topics)} topics)")
+                sleep(1)
+                
+            logger.info(f"Total topics fetched: {len(all_topics)}")
+            return all_topics
+            
+        except Exception as e:
+            logger.error(f"Error fetching all topics: {str(e)}")
+            return []
 
     # Add more methods as needed, using self.client to interact with the API
