@@ -195,13 +195,14 @@ class QuestionMigrator:
             for index, topic in enumerate(all_topics, 1):
                 try:
                     self.discourse_client.delete_topic(topic['id'])
+                    time.sleep(1)
                     deleted_count += 1
                     logger.info(f"[{index}/{total_topics}] Deleted topic ID: {topic['id']} - '{topic.get('title', 'No title')}'")
                     
-                    # Additional pause every 10 deletions
+                    # Additional pause every 20 deletions
                     if deleted_count % 20 == 0:
                         logger.info(f"Pausing after {deleted_count} deletions...")
-                        time.sleep(2)
+                        time.sleep(5)
                         
                 except Exception as e:
                     failed_count += 1
@@ -250,6 +251,11 @@ class QuestionMigrator:
             
             self.migrate_question(question)
             migrated_count += 1
+            
+            # Add sleep every 5 questions
+            if migrated_count % 5 == 0:
+                logging.info("Pausing for 5 seconds after processing 5 questions...")
+                time.sleep(5)
         
         logging.info(f"\nMigration completed:")
         logging.info(f"Total questions: {total_questions}")
