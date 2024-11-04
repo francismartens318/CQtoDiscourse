@@ -219,7 +219,6 @@ class QuestionMigrator:
         Args:
             space_key (str, optional): The Confluence space key to migrate from
         """
-        # Get all questions sorted by creation date
         questions = self.questions_fetcher.get_all_questions(space_key)
         total_questions = len(questions)
         
@@ -238,19 +237,17 @@ class QuestionMigrator:
             creation_date = question['dateAsked']
             creation_date_str = time.strftime('%Y-%m-%d', time.localtime(creation_date/1000))
             
-            # Skip if already migrated (unless ignore_duplicate is True)
-            if not self.ignore_duplicate and str(question_id) in self.migrated_questions:
+            # Convert question_id to int for consistent comparison
+            if question_id in self.migrated_questions or str(question_id) in self.migrated_questions:
                 skipped_count += 1
-                logging.info(f"[{index}/{total_questions}] Skipping already migrated question {question_id} from {creation_date_str}")
+                logging.info(f"[{index}/{total_questions}] Skipping already migrated question {question_id} from {creation_date_str} : {question['title']}")
                 continue
                 
             logging.info(f"[{index}/{total_questions}] Processing question {question_id} from {creation_date_str}")
             
-            # Migrate the question (we already have the full question object)
             self.migrate_question(question)
             migrated_count += 1
         
-        # Final summary
         logging.info(f"\nMigration completed:")
         logging.info(f"Total questions: {total_questions}")
         logging.info(f"Successfully migrated: {migrated_count}")
