@@ -3,10 +3,12 @@ import html
 from markdownify import markdownify as md
 import re
 import emoji  # You'll need to install this package: pip install emoji
+from quirks_handler import QuirksHandler
 
 class ContentFormatter:
     def __init__(self, base_url='https://oldcommunity.exalate.com'):
         self.base_url = base_url.rstrip('/')
+        self.quirks_handler = QuirksHandler()
 
     def process_links(self, content):
         # First handle user profile links
@@ -29,7 +31,8 @@ class ContentFormatter:
         return re.sub(pattern, r'\1', content)
 
     def format_question_content(self, question, question_details, processed_body):
-        author = question['author']['fullName']
+        # Replace user-3fd1a with Francis Martens (Exalate)
+        author = self.quirks_handler.get_display_name(question['author'])
         date_asked = time.strftime('%d %B %Y', time.localtime(question['dateAsked']/1000))
         
         # Add link to original question
@@ -44,9 +47,11 @@ class ContentFormatter:
         return content
 
     def format_answer_content(self, answer_details, processed_body):
-        author = answer_details['author']['fullName']
+        # Replace user-3fd1a with Francis Martens (Exalate)
+        author = self.quirks_handler.get_display_name(answer_details['author'])
         date = time.strftime('%d %B %Y', time.localtime(answer_details['dateAnswered']/1000))
         content = f"<small>*Answer by {author} on {date}*</small>\n\n\n\n"
+        
         # Process the body content to update relative links and convert emojis
         processed_body = self.process_links(processed_body)
         content += processed_body
@@ -59,7 +64,8 @@ class ContentFormatter:
         
         formatted_comments = "\n\n#### Comments:\n"
         for comment in comments:
-            author = comment['author']['fullName']
+            # Replace user-3fd1a with Francis Martens (Exalate)
+            author = self.quirks_handler.get_display_name(comment['author'])
             date = time.strftime('%d %B %Y', time.localtime(comment['dateCommented']/1000))
             body = self.html_to_markdown(comment.get('body', {}).get('content', ''))
             # Process the comment content to update relative links and convert emojis

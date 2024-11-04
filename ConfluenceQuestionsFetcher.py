@@ -1,6 +1,8 @@
 import requests
 from atlassian import Confluence
 from typing import Union
+import logging
+import time
 
 class ConfluenceQuestionsFetcher:
     def __init__(self, confluence_url, confluence_username, confluence_password):
@@ -12,13 +14,13 @@ class ConfluenceQuestionsFetcher:
         self.base_url = confluence_url.rstrip('/') + '/rest/questions/1.0'
         self.auth = (confluence_username, confluence_password)
 
-    def fetch_questions(self, space_key=None, limit=50, start=0):
-        """Fetch a batch of questions from Confluence.
+    def fetch_questions(self, space_key=None, limit=None, start=None):
+        """Fetch questions from Confluence.
         
         Args:
             space_key (str, optional): The Confluence space key to fetch from
-            limit (int, optional): Maximum number of questions to fetch (default: 50)
-            start (int, optional): Starting offset for pagination (default: 0)
+            limit (int, optional): Maximum number of questions to fetch (if None, fetches all)
+            start (int, optional): Starting offset for pagination (if None, starts from beginning)
             
         Returns:
             list: List of question data dictionaries
@@ -28,37 +30,71 @@ class ConfluenceQuestionsFetcher:
         """
         url = f"{self.base_url}/question"
         params = {
-            'limit': limit,
-            'start': start,
-            'spaceKey': space_key
+            'spaceKey': space_key,
+            'limit': 10000  # Set a very high limit to get all questions
         }
+        
+        # Override with specific limit if provided
+        if limit is not None:
+            params['limit'] = limit
+        if start is not None:
+            params['start'] = start
+            
         response = requests.get(url, params=params, auth=self.auth)
         response.raise_for_status()
-        return response.json()
+        
+        questions = response.json()
+        logging.info(f"Fetched {len(questions)} questions from Confluence")
+        return questions
 
     def get_all_questions(self, space_key=None):
-        """Fetch all questions from Confluence using pagination.
+        """Fetch all questions using pagination and return them sorted by creation date.
         
         Args:
             space_key (str, optional): The Confluence space key to fetch from
             
         Returns:
-            list: Complete list of all question data dictionaries
+            list: List of question objects sorted by creation date (oldest first)
         """
+        logging.info("Starting to fetch all questions from Confluence...")
+        if space_key:
+            logging.info(f"Using space key: {space_key}")
+        
         all_questions = []
         start = 0
-        limit = 50
-
+        batch_size = 50  # Confluence's maximum batch size is 500
+        
         while True:
-            questions = self.fetch_questions(space_key, limit, start)
-            if not questions:
+            logging.info(f"Fetching questions batch starting at offset {start}...")
+            questions_batch = self.fetch_questions(space_key, limit=batch_size, start=start)
+            
+            if not questions_batch:
                 break
-            all_questions.extend(questions)
-            if len(questions) < limit:
+                
+            batch_count = len(questions_batch)
+            all_questions.extend(questions_batch)
+            logging.info(f"Fetched {batch_count} questions (total so far: {len(all_questions)})")
+            
+            # If we have enough questions for the try_count, we can stop fetching
+            if hasattr(self, 'try_count') and self.try_count and len(all_questions) >= self.try_count:
+                all_questions = all_questions[:self.try_count]
                 break
-            start += limit
-
-        return all_questions
+            
+            if batch_count < batch_size:
+                break
+                
+            start += batch_size
+        
+        # Sort questions by creation date (oldest first)
+        sorted_questions = sorted(all_questions, key=lambda q: q['dateAsked'])
+        
+        logging.info(f"Found {len(sorted_questions)} total questions to process")
+        if sorted_questions:
+            oldest_date = time.strftime('%Y-%m-%d', time.localtime(sorted_questions[0]['dateAsked']/1000))
+            newest_date = time.strftime('%Y-%m-%d', time.localtime(sorted_questions[-1]['dateAsked']/1000))
+            logging.info(f"Date range: {oldest_date} to {newest_date}")
+        
+        return sorted_questions
 
     def get_question_details(self, question_id):
         """Fetch detailed information for a specific question.
@@ -108,3 +144,53 @@ class ConfluenceQuestionsFetcher:
         response = requests.get(url, auth=self.auth)
         response.raise_for_status()
         return response.json()
+
+    def get_all_question_ids(self, space_key=None):
+        """Fetch all question IDs and their creation dates using pagination.
+        
+        Args:
+            space_key (str, optional): The Confluence space key to fetch from
+            
+        Returns:
+            list: List of tuples (question_id, creation_date)
+        """
+        logging.info("Starting to fetch all question IDs from Confluence...")
+        if space_key:
+            logging.info(f"Using space key: {space_key}")
+        
+        all_questions = []
+        start = 0
+        batch_size = 50 
+        
+        while True:
+            logging.info(f"Fetching questions batch starting at offset {start}...")
+            questions_batch = self.fetch_questions(space_key, limit=batch_size, start=start)
+            
+            if not questions_batch:
+                break
+                
+            batch_count = len(questions_batch)
+            all_questions.extend(questions_batch)
+            logging.info(f"Fetched {batch_count} questions (total so far: {len(all_questions)})")
+            
+            if batch_count < batch_size:
+                break
+                
+            start += batch_size
+        
+        # Extract ID and creation date for each question
+        question_data = [
+            (question['id'], question['dateAsked'])
+            for question in all_questions
+        ]
+        
+        # Sort by creation date (oldest first)
+        sorted_questions = sorted(question_data, key=lambda x: x[1])
+        
+        logging.info(f"Found {len(sorted_questions)} total questions to process")
+        if sorted_questions:
+            oldest_date = time.strftime('%Y-%m-%d', time.localtime(sorted_questions[0][1]/1000))
+            newest_date = time.strftime('%Y-%m-%d', time.localtime(sorted_questions[-1][1]/1000))
+            logging.info(f"Date range: {oldest_date} to {newest_date}")
+        
+        return sorted_questions

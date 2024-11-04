@@ -3,6 +3,7 @@
 
 * Make the oldcommunity url configurable in the .env file
 
+* remove print statements
 
 
 

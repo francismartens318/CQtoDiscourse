@@ -47,6 +47,7 @@ class QuestionMigrator:
             raise ValueError(f"Missing required environment variables: {', '.join(missing_vars)}")
 
         self.questions_fetcher = ConfluenceQuestionsFetcher(confluence_url, confluence_username, confluence_password)
+        self.questions_fetcher.try_count = try_count
         self.discourse_client = DiscourseClient(discourse_url, discourse_api_key, discourse_api_username)
         self.dry_run = dry_run
         self.try_count = try_count
@@ -212,6 +213,49 @@ class QuestionMigrator:
         
         print(f"Topic deletion completed. Deleted {deleted_count} topics. Failed to delete {failed_count} topics.")
 
+    def migrate_questions(self, space_key=None):
+        """Migrate questions from oldest to newest.
+        
+        Args:
+            space_key (str, optional): The Confluence space key to migrate from
+        """
+        # Get all questions sorted by creation date
+        questions = self.questions_fetcher.get_all_questions(space_key)
+        total_questions = len(questions)
+        
+        migrated_count = 0
+        skipped_count = 0
+        
+        logging.info(f"Starting migration of questions...")
+        
+        # Process questions from oldest to newest
+        for index, question in enumerate(questions, 1):
+            if self.try_count and self.topics_created >= self.try_count:
+                logging.info(f"Reached the specified try count of {self.try_count}")
+                break
+                
+            question_id = question['id']
+            creation_date = question['dateAsked']
+            creation_date_str = time.strftime('%Y-%m-%d', time.localtime(creation_date/1000))
+            
+            # Skip if already migrated (unless ignore_duplicate is True)
+            if not self.ignore_duplicate and str(question_id) in self.migrated_questions:
+                skipped_count += 1
+                logging.info(f"[{index}/{total_questions}] Skipping already migrated question {question_id} from {creation_date_str}")
+                continue
+                
+            logging.info(f"[{index}/{total_questions}] Processing question {question_id} from {creation_date_str}")
+            
+            # Migrate the question (we already have the full question object)
+            self.migrate_question(question)
+            migrated_count += 1
+        
+        # Final summary
+        logging.info(f"\nMigration completed:")
+        logging.info(f"Total questions: {total_questions}")
+        logging.info(f"Successfully migrated: {migrated_count}")
+        logging.info(f"Skipped (already migrated): {skipped_count}")
+
 def main():
     parser = argparse.ArgumentParser(description='Migrate questions from Confluence to Discourse.')
     parser.add_argument('--dry-run', action='store_true', help='Perform a dry run without actually creating topics')
@@ -244,7 +288,7 @@ def main():
         space_key = os.getenv('CONFLUENCE_SPACE_KEY')
         
         migrator = QuestionMigrator(dry_run=args.dry_run, try_count=args.try_count, ignore_duplicate=args.ignore_duplicate)
-        migrator.run_migration(space_key)
+        migrator.migrate_questions(space_key)
 
 if __name__ == "__main__":
     main()
