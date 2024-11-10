@@ -7,11 +7,13 @@ The tool has been generated using AI, and is based on the migrator_specification
 
 - Migrates questions with full content preservation
 - Handles attachments and images
-- Preserves original authorship information
+- Handles question and answer comments by formatting them as Discourse expandable quotes
+- Preserves original authorship information by mentioning users by their display name
+- Does NOT migrate users, but registers them in a file called 'user_registry.csv'
 - Maintains question timestamps
 - Supports both bulk migration and single question migration
 - Includes dry-run capability for testing
-- Tracks migrated questions to prevent duplicates
+- Tracks migrated questions to prevent duplicates (in target/migrated_questions.json)
 - Preserves question topics as Discourse tags
 - Handles HTML to Markdown conversion
 

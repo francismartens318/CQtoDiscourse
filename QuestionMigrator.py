@@ -112,17 +112,28 @@ class QuestionMigrator:
 
         if self.dry_run:
             self.simulate_topic_creation(title, content, tags)
-            return
+            return false
 
         try:
             topic = self.discourse_client.create_topic(title, content, question['dateAsked'], tags=tags)
-            print(f"Created Discourse topic: '{title}' (ID: {topic['topic_id']})")
+            if isinstance(topic, dict):
+                topic_id = topic.get('topic_id')
+                if topic_id:
+                    print(f"Created Discourse topic: '{title}' (ID: {topic_id})")
+                else:
+                    logger.warning(f"No topic_id found in response:")
+            # Skip further processing when no topic_id is found
+            if not topic_id:
+                return False
+
             self.answer_processor.process_answers(question, topic['topic_id'])
             self.update_migration_status(question_id)
+            return True
         except (DiscourseClientError, DiscourseServerError) as e:
-            logging.error(f"Failed to create topic '{title}': {str(e)}")
+            logger.error(f"Failed to create topic '{title}': {str(e)}")
+            return False
 
-        print(f"{'Would migrate' if self.dry_run else 'Migrated'} question: {title}")
+        
 
     def prepare_question_content(self, question):
         question_details = self.questions_fetcher.get_question_details(question['id'])
@@ -177,8 +188,8 @@ class QuestionMigrator:
         if not question:
             print(f"Question with ID {question_id} not found.")
             return
-        self.migrate_question(question)
-        print(f"Migration of question {question_id} completed.")
+        result = self.migrate_question(question)
+        print(f"Migration of question {question_id} " + ("completed." if result else "skipped."))
 
     def delete_all_topics(self):
         if self.dry_run:
@@ -252,7 +263,9 @@ class QuestionMigrator:
                 
             logging.info(f"[{index}/{total_questions}] Processing question {question_id} from {creation_date_str}")
             
-            self.migrate_question(question)
+            if not self.migrate_question(question):
+                skipped_count += 1
+
             migrated_count += 1
             
             # Add sleep every 5 questions
