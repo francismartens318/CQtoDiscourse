@@ -74,7 +74,7 @@ class QuestionMigrator:
             self.discourse_client,
             self.attachment_processor,
             self.user_registry,
-            self.content_formatter
+            self.content_formatter,
             dry_run
         )
         self.comment_processor = CommentProcessor(

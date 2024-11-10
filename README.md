@@ -68,7 +68,7 @@ CONFLUENCE_PASSWORD=<your confluence password>>
 CONFLUENCE_API_TOKEN=your-confluence-api-token
 
 DISCOURSE_URL=<https://your-discourse-instance>
-DISCOURSE_API_KEY=<e7ef00553ae83c492373f52a63cd06f856ef686c927d86118558edee90c113eb>
+DISCOURSE_API_KEY=<your-discourse-api-key>
 
 # use system user for Discourse
 DISCOURSE_API_USERNAME=system
