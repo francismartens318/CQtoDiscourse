@@ -4,7 +4,9 @@ class QuirksHandler:
     def __init__(self):
         # Dictionary of known user replacements
         self.user_replacements = {
-            'user-3fd1a': 'Francis Martens (Exalate)'
+            # Confluence user ID -> Display name
+            'user-abcd': 'John Doe',
+            'legacy_user': 'Jane Smith'
         }
     
     def get_display_name(self, author_data):

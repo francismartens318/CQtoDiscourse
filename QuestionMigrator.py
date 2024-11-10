@@ -52,7 +52,9 @@ class QuestionMigrator:
         self.dry_run = dry_run
         self.try_count = try_count
         self.ignore_duplicate = ignore_duplicate
-        self.migrated_questions_file = 'migrated_questions.json'
+        # Ensure 'target directory exists
+        os.makedirs('target', exist_ok=True)
+        self.migrated_questions_file = 'target/migrated_questions.json'
         self.migrated_questions = self.load_migrated_questions()
         self.topics_created = 0
         self.confluence_url = confluence_url
@@ -66,12 +68,13 @@ class QuestionMigrator:
             self.discourse_client,
             dry_run
         )
-        self.content_formatter = ContentFormatter(base_url='https://oldcommunity.exalate.com')
+        self.content_formatter = ContentFormatter(base_url=self.confluence_url)
         self.answer_processor = AnswerProcessor(
             self.questions_fetcher,
             self.discourse_client,
             self.attachment_processor,
             self.user_registry,
+            self.content_formatter
             dry_run
         )
         self.comment_processor = CommentProcessor(

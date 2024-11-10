@@ -2,13 +2,13 @@ import logging
 from content_formatter import ContentFormatter
 
 class AnswerProcessor:
-    def __init__(self, questions_fetcher, discourse_client, attachment_processor, user_registry, dry_run=True):
+    def __init__(self, questions_fetcher, discourse_client, attachment_processor, user_registry, content_formatter, dry_run=True):
         self.questions_fetcher = questions_fetcher
         self.discourse_client = discourse_client
         self.attachment_processor = attachment_processor
         self.user_registry = user_registry
         self.dry_run = dry_run
-        self.content_formatter = ContentFormatter()
+        self.content_formatter = content_formatter
 
     def process_answers(self, question, topic_id):
         """Process all answers for a given question and add them to the Discourse topic.
