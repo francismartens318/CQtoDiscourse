@@ -1,6 +1,7 @@
 # Confluence Questions to Discourse Migrator
 
 A Python tool designed to migrate a Confluence questions based Q&A site and their associated content (answers, comments, and attachments) to a Discourse forum.
+The tool has been generated using AI, and is based on the migrator_specification.md file.
 
 ## Features
 
@@ -80,7 +81,7 @@ CONFLUENCE_SPACE_KEY=
 
 4. Run the migrator:
 ```bash
-python confluence_to_discourse_migrator.py
+python3 QuestionMigrator.py
 ```
 
 ### Contribution guidelines ###
@@ -91,8 +92,7 @@ python confluence_to_discourse_migrator.py
 
 ### Who do I talk to? ###
 
-* Repo owner or admin
-* Other community or team contact
+* Repo owner
 
 ## Usage
 
@@ -161,6 +161,10 @@ To recreate this project, you would need to implement:
 
 4. `logger_config.py`:
    - Logging setup and configuration
+
+
+Also checkout the migrator_specification.md which contains the prompts used to generate this project.
+
 
 ## Error Handling
 
