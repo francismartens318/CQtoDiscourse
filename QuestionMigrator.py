@@ -112,7 +112,7 @@ class QuestionMigrator:
 
         if self.dry_run:
             self.simulate_topic_creation(title, content, tags)
-            return false
+            return False
 
         try:
             topic = self.discourse_client.create_topic(title, content, question['dateAsked'], tags=tags)
